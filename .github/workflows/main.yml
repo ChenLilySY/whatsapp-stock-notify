@@ -2,9 +2,8 @@ name: Run Stock Bot
 
 on:
   schedule:
-    # 台灣時間週一至週五 09:50 執行 (國際標準時 UTC 01:50)
     - cron: '50 1 * * 1-5'
-  workflow_dispatch: # 讓你可以隨時點擊 Actions 按鈕手動測試
+  workflow_dispatch:
 
 jobs:
   build:
@@ -18,13 +17,17 @@ jobs:
         with:
           python-version: '3.9'
 
+      - name: Install Fonts # 新增這一步：安裝中文字體
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y fonts-noto-cjk
+
       - name: Install dependencies
         run: |
           pip install yfinance twilio pandas matplotlib requests
 
-      - name: Run Stock Analysis
+      - name: Run Bot
         env:
-          # 這裡必須對應你在 Settings > Secrets 裡設定的名字
           TWILIO_SID: ${{ secrets.TWILIO_SID }}
           TWILIO_TOKEN: ${{ secrets.TWILIO_TOKEN }}
           MY_PHONE: ${{ secrets.MY_PHONE }}
