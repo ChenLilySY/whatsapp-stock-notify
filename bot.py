@@ -7,8 +7,12 @@ import requests
 import base64
 from twilio.rest import Client
 from datetime import datetime, timedelta, timezone
+# 1. 設置中文字體 (針對 Ubuntu 環境)
+from matplotlib import rcParams
+rcParams['font.family'] = 'sans-serif'
+rcParams['font.sans-serif'] = ['Taipei Sans TC Beta', 'DejaVu Sans', 'Arial'] # 確保有中文
 
-# --- 1. 讀取密鑰 ---
+# --- 讀取密鑰 ---
 SID = os.environ.get('TWILIO_SID')
 TOKEN = os.environ.get('TWILIO_TOKEN')
 TO_PHONE = os.environ.get('MY_PHONE')
@@ -36,28 +40,15 @@ def process_stock(symbol, name):
     if df_now.empty or df_hist.empty:
         return
 
-    # --- 判斷狀態 ---
+    # --- 判斷狀態與時間 ---
     tz = timezone(timedelta(hours=8))
     now = datetime.now(tz)
     is_open = now.weekday() <= 4 and 9 <= now.hour < 13 or (now.hour == 13 and now.minute <= 35)
     status_text = "盤中" if is_open else "收盤"
 
-    # --- 繪圖 ---
-    plt.figure(figsize=(10, 5))
-    plt.plot(df_now.index, df_now['Close'], color='red', linewidth=2)
-    prev_close = df_hist.iloc[-2]['Close']
-    plt.axhline(y=prev_close, color='gray', linestyle='--')
-    plt.title(f"{name} ({symbol}) - {status_text} Trend", fontsize=15)
-    plt.grid(True, alpha=0.3)
-    plt.tight_layout()
-    
-    img_path = f"{symbol.split('.')[0]}.png"
-    plt.savefig(img_path)
-    plt.close()
-
     # --- 數據計算 ---
-    img_url = upload_image(img_path)
     now_p = df_now['Close'].iloc[-1]
+    prev_close = df_hist.iloc[-2]['Close']
     diff = now_p - prev_close
     pct = (diff / prev_close) * 100
     
@@ -71,7 +62,7 @@ def process_stock(symbol, name):
     y_high = df_hist.iloc[-252:]['High'].max()
     dist_high = ((now_p - y_high) / y_high) * 100
 
-    # --- 重新組合完整文字 (包含你消失的欄位) ---
+    # --- 重新組合完整文字 ---
     content = (
         f"⏰ 時間：{now.strftime('%H:%M:%S')} ({status_text})\n"
         f"📍 標的：{symbol.split('.')[0]} {name}\n"
@@ -82,6 +73,29 @@ def process_stock(symbol, name):
         f"🏆 52週區間：{y_low:.2f} ~ {y_high:.2f} (距高{dist_high:.1f}%)\n"
         f"📐 均線：月{ma20:.1f} | 季{ma60:.1f} | 年{ma240:.1f}"
     )
+
+    # --- 繪圖 (加入你要的資訊) ---
+    plt.figure(figsize=(10, 6)) # 稍微加高一點
+    plt.plot(df_now.index, df_now['Close'], color='red', linewidth=2)
+    plt.axhline(y=prev_close, color='gray', linestyle='--')
+    
+    # 主標題
+    plt.title(f"{symbol.split('.')[0]} {name} 當日走勢", fontsize=18, fontweight='bold', y=1.05) # 標題往上移
+    
+    # 副標題 (日期、現價、漲跌)
+    date_str = now.strftime('%Y/%m/%d')
+    price_info = f"{date_str} | 現價: {now_p:.2f} | 漲跌: {'+' if diff>0 else ''}{diff:.2f} ({pct:+.2f}%)"
+    plt.text(0.5, 1.02, price_info, transform=plt.gca().transAxes, ha='center', va='bottom', fontsize=12, color='red' if diff > 0 else 'green') # 加上資訊
+
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout() # 自動調整佈局
+    
+    img_path = f"{symbol.split('.')[0]}.png"
+    plt.savefig(img_path)
+    plt.close()
+
+    # --- 上傳並發送 ---
+    img_url = upload_image(img_path)
 
     try:
         client = Client(SID, TOKEN)
