@@ -5,6 +5,7 @@ import requests
 import base64
 from twilio.rest import Client
 from datetime import datetime
+import matplotlib; matplotlib.use('Agg')
 
 # 設定區
 SID = os.environ['TWILIO_SID']
