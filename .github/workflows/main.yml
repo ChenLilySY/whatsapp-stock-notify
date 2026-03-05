@@ -1,36 +1,30 @@
 name: Run Stock Bot
 
-# 設定執行觸發條件
 on:
   schedule:
-    # 台灣時間週一至週五早上 09:50 自動執行 (UTC 01:50)
+    # 台灣時間週一至週五 09:50 執行 (國際標準時 UTC 01:50)
     - cron: '50 1 * * 1-5'
-  workflow_dispatch: # 保留手動測試按鈕
+  workflow_dispatch: # 讓你可以隨時點擊 Actions 按鈕手動測試
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      # 1. 下載你的程式碼
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # 2. 安裝 Python 環境
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.9'
 
-      # 3. 安裝所需的套件
       - name: Install dependencies
         run: |
           pip install yfinance twilio pandas matplotlib requests
 
-      # 4. 執行股市報價程式
-      - name: Run bot
+      - name: Run Stock Analysis
         env:
-          # 這裡會從 GitHub Secrets 讀取你設定好的密鑰，並交給 Python
+          # 這裡必須對應你在 Settings > Secrets 裡設定的名字
           TWILIO_SID: ${{ secrets.TWILIO_SID }}
           TWILIO_TOKEN: ${{ secrets.TWILIO_TOKEN }}
           MY_PHONE: ${{ secrets.MY_PHONE }}
