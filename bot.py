@@ -8,7 +8,7 @@ import base64
 from twilio.rest import Client
 from datetime import datetime, timedelta, timezone
 
-# --- 讀取密鑰 ---
+# --- 1. 讀取密鑰 ---
 SID = os.environ.get('TWILIO_SID')
 TOKEN = os.environ.get('TWILIO_TOKEN')
 TO_PHONE = os.environ.get('MY_PHONE')
@@ -34,13 +34,11 @@ def process_stock(symbol, name):
     df_hist = stock.history(period="2y")
     
     if df_now.empty or df_hist.empty:
-        print(f"⚠️ {name} 數據缺失")
         return
 
-    # --- 判斷盤中/收盤狀態 ---
+    # --- 判斷狀態 ---
     tz = timezone(timedelta(hours=8))
     now = datetime.now(tz)
-    # 台股交易時間為週一(0)至週五(4)，09:00~13:35
     is_open = now.weekday() <= 4 and 9 <= now.hour < 13 or (now.hour == 13 and now.minute <= 35)
     status_text = "盤中" if is_open else "收盤"
 
@@ -62,19 +60,27 @@ def process_stock(symbol, name):
     now_p = df_now['Close'].iloc[-1]
     diff = now_p - prev_close
     pct = (diff / prev_close) * 100
+    
+    # 均線
     ma20 = df_hist['Close'].rolling(20).mean().iloc[-1]
     ma60 = df_hist['Close'].rolling(60).mean().iloc[-1]
+    ma240 = df_hist['Close'].rolling(240).mean().iloc[-1]
+    
+    # 區間
+    y_low = df_hist.iloc[-252:]['Low'].min()
     y_high = df_hist.iloc[-252:]['High'].max()
     dist_high = ((now_p - y_high) / y_high) * 100
 
+    # --- 重新組合完整文字 (包含你消失的欄位) ---
     content = (
-        f"⏰ 時間：{now.strftime('%H:%M:%S')} ({status_text}) | 台北\n"
-        f"📌 標的：{symbol.split('.')[0]} {name}\n"
+        f"⏰ 時間：{now.strftime('%H:%M:%S')} ({status_text})\n"
+        f"📍 標的：{symbol.split('.')[0]} {name}\n"
         f"昨收：{prev_close:.2f} | 現價：{now_p:.2f}\n"
         f"漲跌：{'+' if diff>0 else ''}{diff:.2f} ({pct:+.2f}%)\n"
         f"--------------------------------\n"
-        f"🏆 距52週高點：{dist_high:.2f}%\n"
-        f"📐 技術均線：月{ma20:.1f} | 季{ma60:.1f}\n"
+        f"📊 本日區間：{df_now['Low'].min():.2f} ~ {df_now['High'].max():.2f}\n"
+        f"🏆 52週區間：{y_low:.2f} ~ {y_high:.2f} (距高{dist_high:.1f}%)\n"
+        f"📐 均線：月{ma20:.1f} | 季{ma60:.1f} | 年{ma240:.1f}"
     )
 
     try:
@@ -83,9 +89,9 @@ def process_stock(symbol, name):
             client.messages.create(from_=FROM_PHONE, body=content, media_url=[img_url], to=TO_PHONE)
         else:
             client.messages.create(from_=FROM_PHONE, body=content, to=TO_PHONE)
-        print(f"✅ {name} 訊息已送出")
+        print(f"✅ {name} 訊息已發送")
     except Exception as e:
-        print(f"❌ {name} 發送失敗: {e}")
+        print(f"❌ 發送錯誤: {e}")
 
 def main():
     stock_map = {"2330.TW": "台積電", "0050.TW": "元大台灣50"}
