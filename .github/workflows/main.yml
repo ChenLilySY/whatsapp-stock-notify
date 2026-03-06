@@ -2,8 +2,11 @@ name: Run Stock Bot
 
 on:
   schedule:
-    - cron: '50 1 * * 1-5'
-  workflow_dispatch:
+    # 改成 09:40 跑，留一點延遲空間
+    - cron: '40 1 * * 1-5'
+  push:
+    branches: [ main ] # 你每次存檔也會自動跑，方便測試
+  workflow_dispatch: # 保留手動按鈕
 
 jobs:
   build:
