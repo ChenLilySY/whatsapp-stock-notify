@@ -2,8 +2,10 @@ name: Run Stock Bot
 
 on:
   schedule:
-    # 改成 08:07 跑，留一點延遲空間
-    - cron: '07 0 * * 1-5'
+    # 台灣 08:07 = UTC 00:07
+    # 台灣 14:07 = UTC 06:07
+    - cron: '7 0,6 * * 1-5'
+
   push:
     branches: [ main ] # 你每次存檔也會自動跑，方便測試
   workflow_dispatch: # 保留手動按鈕
