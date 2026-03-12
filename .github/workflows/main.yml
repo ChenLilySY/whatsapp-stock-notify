@@ -2,9 +2,9 @@ name: Run Stock Bot
 
 on:
   schedule:
-    # 台灣 08:07 = UTC 00:07
-    # 台灣 14:07 = UTC 06:07
-    - cron: '7 0,6 * * 1-5'
+    # 23:13 UTC = 台灣 07:13 (前一天跨當天)
+    # 06:13 UTC = 台灣 14:13
+    - cron: '13 23,6 * * 1-5'
 
   push:
     branches: [ main ] # 你每次存檔也會自動跑，方便測試
